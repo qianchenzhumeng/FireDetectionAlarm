@@ -116,13 +116,13 @@ void RTC_Config(void)
   * @brief  System Clock Configuration
   *         The system Clock is configured as follow : 
   *            System Clock source            = PLL (HSI)
-  *            SYSCLK(Hz)                     = 32000000
-  *            HCLK(Hz)                       = 32000000
+  *            SYSCLK(Hz)                     = 16000000
+  *            HCLK(Hz)                       = 16000000
   *            AHB Prescaler                  = 1
   *            APB1 Prescaler                 = 1
   *            APB2 Prescaler                 = 1
   *            HSI Frequency(Hz)              = 16000000
-  *            PLL_MUL                        = 6
+  *            PLL_MUL                        = 3
   *            PLL_DIV                        = 3
   *            Flash Latency(WS)              = 1
   *            Main regulator output voltage  = Scale1 mode
@@ -142,17 +142,17 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
-  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL6;
-  RCC_OscInitStruct.PLL.PLLDIV = RCC_PLL_DIV3;
+  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL3;
+  RCC_OscInitStruct.PLL.PLLDIV = RCC_PLL_DIV4;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     Error_Handler();
   }
 
     
-  /* Set Voltage scale1 as MCU will run at 32MHz */
+  /* Set Voltage scale1 as MCU will run at 16MHz */
   __PWR_CLK_ENABLE();
-  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
+  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE2);
 
   /* Poll VOSF bit of in PWR_CSR. Wait until it is reset to 0 */
   while (__HAL_PWR_GET_FLAG(PWR_FLAG_VOS) != RESET) {};

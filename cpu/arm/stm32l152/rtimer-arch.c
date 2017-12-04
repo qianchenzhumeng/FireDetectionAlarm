@@ -64,9 +64,9 @@ rtimer_arch_init(void)
 
   st_lib_tim2_clk_enable();
   htim2.Instance = TIM2;
-  htim2.Init.Prescaler = PRESCALER;
+  htim2.Init.Prescaler = TIM2_PRESCALER;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 1;
+  htim2.Init.Period = TIM2_PERIOD;
 
   st_lib_hal_tim_base_init(&htim2);
   st_lib_hal_tim_base_start_it(&htim2);

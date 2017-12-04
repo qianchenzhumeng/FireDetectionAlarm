@@ -31,9 +31,10 @@
 #define LEDS_CONF_ALL 3 /*No sensors -> we can use SPIRIT1 LED in this case*/
 #endif /*X_NUCLEO_IKS01A1*/
 /*---------------------------------------------------------------------------*/
-#define F_CPU                   32000000ul
+#define F_CPU                   16000000ul
 #define RTIMER_ARCH_SECOND              32768
-#define PRESCALER       ((F_CPU / (RTIMER_ARCH_SECOND * 2)))
+#define TIM2_PRESCALER       ((F_CPU / RTIMER_ARCH_SECOND))
+#define TIM2_PERIOD             1
 
 #define UART1_CONF_TX_WITH_INTERRUPT        0
 #define WITH_SERIAL_LINE_INPUT              1

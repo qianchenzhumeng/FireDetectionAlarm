@@ -1,10 +1,6 @@
 #include "fire_alarm_board.h"
 #include "st-lib.h"
-
-#define TIMER_FREQUENCY_HZ              ((uint32_t)1000)    /* Timer frequency (unit: Hz). With SysClk set to 32MHz, timer frequency TIMER_FREQUENCY_HZ range is min=1Hz, max=32.719kHz. */
-#define PRESCALER                       ((uint32_t)31999)
-#define PERIOD_VALUE                    ((uint32_t)999)
-#define PULSE_VALUE                     ((uint32_t)700)
+#include "platform-conf.h"
 
 static uint8_t BoardInitialized = 0;
 static ADC_HandleTypeDef    AdcHandle;
@@ -69,8 +65,8 @@ void FAB_Init(void)
     /* buzzer */
     TIMx_CLK_ENABLE();
     TimHandle.Instance = TIMx;
-    TimHandle.Init.Prescaler         = PRESCALER;
-    TimHandle.Init.Period            = PERIOD_VALUE;
+    TimHandle.Init.Prescaler         = TIMx_PRESCALER;
+    TimHandle.Init.Period            = TIMx_PERIOD_VALUE;
     TimHandle.Init.ClockDivision     = 0;
     TimHandle.Init.CounterMode       = TIM_COUNTERMODE_UP;
     HAL_TIM_PWM_Init(&TimHandle);
@@ -79,7 +75,7 @@ void FAB_Init(void)
     TIM_OCInitStructure.OCPolarity   = TIM_OCPOLARITY_HIGH;
     TIM_OCInitStructure.OCFastMode   = TIM_OCFAST_DISABLE;
     TIM_OCInitStructure.OCIdleState  = TIM_OCIDLESTATE_RESET;
-    TIM_OCInitStructure.Pulse        = PULSE_VALUE;
+    TIM_OCInitStructure.Pulse        = TIMx_PULSE_VALUE;
     HAL_TIM_PWM_ConfigChannel(&TimHandle, &TIM_OCInitStructure, TIM_CHANNEL_2);
     
     /* Enable GPIO Channels Clock */
@@ -101,19 +97,23 @@ void FAB_GetTemperature(uint16_t * pData)
     sConfig.SamplingTime = ADC_SAMPLETIME_96CYCLES;
     HAL_ADC_ConfigChannel(&AdcHandle, &sConfig);
 
+    ADCx_CLK_ENABLE();
+    
     HAL_ADC_Start(&AdcHandle);
-    HAL_ADC_PollForConversion(&AdcHandle, (1000/TIMER_FREQUENCY_HZ));
+    HAL_ADC_PollForConversion(&AdcHandle, (1000/TIMx_FREQUENCY_HZ));
     pData[0] = (uint16_t)(HAL_ADC_GetValue(&AdcHandle));
     HAL_ADC_Start(&AdcHandle);
-    HAL_ADC_PollForConversion(&AdcHandle, (1000/TIMER_FREQUENCY_HZ));
+    HAL_ADC_PollForConversion(&AdcHandle, (1000/TIMx_FREQUENCY_HZ));
     pData[1] = (uint16_t)(HAL_ADC_GetValue(&AdcHandle));
     HAL_ADC_Start(&AdcHandle);
-    HAL_ADC_PollForConversion(&AdcHandle, (1000/TIMER_FREQUENCY_HZ));
+    HAL_ADC_PollForConversion(&AdcHandle, (1000/TIMx_FREQUENCY_HZ));
     pData[2] = (uint16_t)(HAL_ADC_GetValue(&AdcHandle));
     HAL_ADC_Start(&AdcHandle);
-    HAL_ADC_PollForConversion(&AdcHandle, (1000/TIMER_FREQUENCY_HZ));
+    HAL_ADC_PollForConversion(&AdcHandle, (1000/TIMx_FREQUENCY_HZ));
     pData[3] = (uint16_t)(HAL_ADC_GetValue(&AdcHandle));
     HAL_ADC_Stop(&AdcHandle);
+    
+    ADCx_CLK_DISABLE();
 }
 
 void FAB_GetSmoke(uint16_t * pData)
@@ -125,21 +125,23 @@ void FAB_GetSmoke(uint16_t * pData)
     sConfig.SamplingTime = ADC_SAMPLETIME_96CYCLES;
     HAL_ADC_ConfigChannel(&AdcHandle, &sConfig);
     
+    ADCx_CLK_ENABLE();
+    
     /* Sample Dark */
     HAL_GPIO_WritePin(FIRE_BOARD_SC_OA_CTRL_GPIO_PORT,
                       FIRE_BOARD_SC_OA_CTRL_PIN, GPIO_PIN_SET);
     clock_delay(20);
     HAL_ADC_Start(&AdcHandle);
-    HAL_ADC_PollForConversion(&AdcHandle, (1000/TIMER_FREQUENCY_HZ));
+    HAL_ADC_PollForConversion(&AdcHandle, (1000/TIMx_FREQUENCY_HZ));
     pData[0] = (uint16_t)(HAL_ADC_GetValue(&AdcHandle));
     HAL_ADC_Start(&AdcHandle);
-    HAL_ADC_PollForConversion(&AdcHandle, (1000/TIMER_FREQUENCY_HZ));
+    HAL_ADC_PollForConversion(&AdcHandle, (1000/TIMx_FREQUENCY_HZ));
     pData[1] = (uint16_t)(HAL_ADC_GetValue(&AdcHandle));
     HAL_ADC_Start(&AdcHandle);
-    HAL_ADC_PollForConversion(&AdcHandle, (1000/TIMER_FREQUENCY_HZ));
+    HAL_ADC_PollForConversion(&AdcHandle, (1000/TIMx_FREQUENCY_HZ));
     pData[2] = (uint16_t)(HAL_ADC_GetValue(&AdcHandle));
     HAL_ADC_Start(&AdcHandle);
-    HAL_ADC_PollForConversion(&AdcHandle, (1000/TIMER_FREQUENCY_HZ));
+    HAL_ADC_PollForConversion(&AdcHandle, (1000/TIMx_FREQUENCY_HZ));
     pData[3] = (uint16_t)(HAL_ADC_GetValue(&AdcHandle));
     
     /* Sample Light */
@@ -147,16 +149,16 @@ void FAB_GetSmoke(uint16_t * pData)
                       FIRE_BOARD_SC_LED_CTRL_PIN, GPIO_PIN_SET);
     clock_delay(20);
     HAL_ADC_Start(&AdcHandle);
-    HAL_ADC_PollForConversion(&AdcHandle, (1000/TIMER_FREQUENCY_HZ));
+    HAL_ADC_PollForConversion(&AdcHandle, (1000/TIMx_FREQUENCY_HZ));
     pData[4] = (uint16_t)(HAL_ADC_GetValue(&AdcHandle));
     HAL_ADC_Start(&AdcHandle);
-    HAL_ADC_PollForConversion(&AdcHandle, (1000/TIMER_FREQUENCY_HZ));
+    HAL_ADC_PollForConversion(&AdcHandle, (1000/TIMx_FREQUENCY_HZ));
     pData[5] = (uint16_t)(HAL_ADC_GetValue(&AdcHandle));
     HAL_ADC_Start(&AdcHandle);
-    HAL_ADC_PollForConversion(&AdcHandle, (1000/TIMER_FREQUENCY_HZ));
+    HAL_ADC_PollForConversion(&AdcHandle, (1000/TIMx_FREQUENCY_HZ));
     pData[6] = (uint16_t)(HAL_ADC_GetValue(&AdcHandle));
     HAL_ADC_Start(&AdcHandle);
-    HAL_ADC_PollForConversion(&AdcHandle, (1000/TIMER_FREQUENCY_HZ));
+    HAL_ADC_PollForConversion(&AdcHandle, (1000/TIMx_FREQUENCY_HZ));
     pData[7] = (uint16_t)(HAL_ADC_GetValue(&AdcHandle));
 
     HAL_GPIO_WritePin(FIRE_BOARD_SC_LED_CTRL_GPIO_PORT,
@@ -164,14 +166,18 @@ void FAB_GetSmoke(uint16_t * pData)
     HAL_GPIO_WritePin(FIRE_BOARD_SC_OA_CTRL_GPIO_PORT,
                       FIRE_BOARD_SC_OA_CTRL_PIN, GPIO_PIN_RESET);
     HAL_ADC_Stop(&AdcHandle);
+    
+    ADCx_CLK_DISABLE();
 }
 
 void FAB_ActivateBuzzer(void)
 {
+    TIMx_CLK_ENABLE();
     HAL_TIM_PWM_Start(&TimHandle, TIM_CHANNEL_2);
 }
 
 void FAB_DeactivateBuzzer(void)
 {
     HAL_TIM_PWM_Stop(&TimHandle, TIM_CHANNEL_2);
+    TIMx_CLK_DISABLE();
 }
