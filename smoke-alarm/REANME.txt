@@ -1,0 +1,4 @@
+已知BUG：
+1、按照以下顺序添加节点时，sender无法收到sink的arrep（没有传入chamele中）：sink、sender
+    解决方法：需要先添加sender，再添加sink。
+    可能原因：可能是ContikiMAC的某些机制造成的
