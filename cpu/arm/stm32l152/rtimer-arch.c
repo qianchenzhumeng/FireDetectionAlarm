@@ -49,11 +49,12 @@ st_lib_tim_handle_typedef htim2;
 /*---------------------------------------------------------------------------*/
 void
 st_lib_tim2_irq_handler(void)
-{
-  /* clear interrupt pending flag */
-  st_lib_hal_tim_clear_it(&htim2, TIM_IT_UPDATE);
-
-  rtimer_clock++;
+{      
+    if(__HAL_TIM_GET_ITSTATUS(&htim2, TIM_IT_CC1) == RESET)
+    {
+        __HAL_TIM_DISABLE_IT(&htim2, TIM_IT_CC1);
+        rtimer_run_next();
+    }
 }
 /*---------------------------------------------------------------------------*/
 void
@@ -69,7 +70,7 @@ rtimer_arch_init(void)
   htim2.Init.Period = TIM2_PERIOD;
 
   st_lib_hal_tim_base_init(&htim2);
-  st_lib_hal_tim_base_start_it(&htim2);
+//  st_lib_hal_tim_base_start_it(&htim2);
 
   s_clock_source_config.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
   st_lib_hal_tim_config_clock_source(&htim2, &s_clock_source_config);
@@ -77,14 +78,13 @@ rtimer_arch_init(void)
   st_lib_hal_tim_oc_init(&htim2);
 
   s_config_oc.OCMode = TIM_OCMODE_TIMING;
-  s_config_oc.Pulse = 0;
+  s_config_oc.Pulse = 255;
   s_config_oc.OCPolarity = TIM_OCPOLARITY_HIGH;
   st_lib_hal_tim_oc_config_channel(&htim2, &s_config_oc, TIM_CHANNEL_1);
 
-  st_lib_hal_tim_clear_flag(&htim2, TIM_FLAG_UPDATE);
+//  st_lib_hal_tim_clear_flag(&htim2, TIM_FLAG_CC1);
 
-  /* Enable TIM2 Update interrupt */
-  st_lib_hal_tim_enable_it(&htim2, TIM_IT_UPDATE);
+  __HAL_TIM_DISABLE_IT(&htim2, TIM_IT_CC1);
 
   st_lib_hal_tim_enable(&htim2);
 
@@ -95,11 +95,19 @@ rtimer_arch_init(void)
 rtimer_clock_t
 rtimer_arch_now(void)
 {
+  rtimer_clock = __HAL_TIM_GetCounter(&htim2);
   return rtimer_clock;
 }
 /*---------------------------------------------------------------------------*/
 void
 rtimer_arch_schedule(rtimer_clock_t t)
 {
+//    __HAL_TIM_SetCompare(&htim2, TIM_CHANNEL_1, t);
+    
+    /* clear interrupt pending flag */
+//    st_lib_hal_tim_clear_it(&htim2, TIM_IT_CC1);
+    
+    /* Enable TIM2 Capture compare interrupt */
+//    st_lib_hal_tim_enable_it(&htim2, TIM_IT_CC1);
 }
 /*---------------------------------------------------------------------------*/

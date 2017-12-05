@@ -34,7 +34,7 @@
 #define F_CPU                   16000000ul
 #define RTIMER_ARCH_SECOND              32768
 #define TIM2_PRESCALER       ((F_CPU / RTIMER_ARCH_SECOND))
-#define TIM2_PERIOD             1
+#define TIM2_PERIOD             65535
 
 #define UART1_CONF_TX_WITH_INTERRUPT        0
 #define WITH_SERIAL_LINE_INPUT              1
