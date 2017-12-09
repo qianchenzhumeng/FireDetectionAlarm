@@ -30,10 +30,18 @@
 #endif
 
 #ifndef NETSTACK_CONF_RDC
-#define NETSTACK_CONF_RDC     contikimac_driver
-#define NULLRDC_802154_AUTOACK 1
-#define NULLRDC_802154_AUTOACK_HW 1
+//#define NETSTACK_CONF_RDC     contikimac_driver
+#define NETSTACK_CONF_RDC     modifiedrdc_driver
+//#define NETSTACK_CONF_RDC       nullrdc_driver
+#define NULLRDC_802154_AUTOACK 0
+#define NULLRDC_802154_AUTOACK_HW 0
 #endif
+
+//#ifndef RDC_CONF_HARDWARE_CSMA
+#define RDC_CONF_HARDWARE_CSMA  1
+//#endif
+
+#define CONTIKIMAC_CONF_CCA_CHECK_TIME  RTIMER_ARCH_SECOND / 1
 
 #ifndef NETSTACK_CONF_RDC_CHANNEL_CHECK_RATE
 #define NETSTACK_CONF_RDC_CHANNEL_CHECK_RATE 8
