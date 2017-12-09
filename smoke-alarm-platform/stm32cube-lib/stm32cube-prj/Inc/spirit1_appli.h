@@ -169,7 +169,10 @@
 #define SYNC_WORD                   0x88888888
 */
 
+#define LDC_CYCLE                   68.0  /* ms */
+#define RX_TIMEOUT                  10.545  /* ms */
 
+#define T_INTERVAL                  2.0 /* ms */
 
 /* Exported types ------------------------------------------------------------*/
 //extern LPTIM_HandleTypeDef             LptimHandle;
