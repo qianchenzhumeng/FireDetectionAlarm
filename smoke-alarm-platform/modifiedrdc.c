@@ -10,7 +10,7 @@
 #define STROBE_TIME             2228  /* 2228 / 32768 ~= 68 ms */
 #define INTER_PACKET_INTERVAL   65   /* 65 / 32768 ~= 2 ms */
 
-//#define DEBUG 0
+#define DEBUG 0
 #if DEBUG
 #include <stdio.h>
 #define PRINTF(...) printf(__VA_ARGS__)
@@ -47,15 +47,12 @@ send_one_packet(mac_callback_t sent, void *ptr)
     return MAC_TX_ERR_FATAL;
   }
 
-  NETSTACK_RADIO.prepare(packetbuf_hdrptr(), packetbuf_totlen());
-
   if(packetbuf_holds_broadcast()) {
     is_broadcast = 1;
     PRINTDEBUG("ModifiedRDC: send broadcast\n");
   }
 
   transmit_len = packetbuf_totlen();
-  NETSTACK_RADIO.prepare(packetbuf_hdrptr(), transmit_len);
 
   if(NETSTACK_RADIO.receiving_packet() || NETSTACK_RADIO.pending_packet()) {
     PRINTF("ModifiedRDC: collision receiving %d, pending %d\n",
@@ -65,24 +62,16 @@ send_one_packet(mac_callback_t sent, void *ptr)
 
   t0 = RTIMER_NOW();
   for(strobes = 0; RTIMER_CLOCK_LT(RTIMER_NOW(), t0 + STROBE_TIME); strobes++) {
+    NETSTACK_RADIO.prepare(packetbuf_hdrptr(), transmit_len);
     ret = NETSTACK_RADIO.transmit(transmit_len);
     
-    if(ret == MAC_TX_COLLISION) {
+    if(ret == RADIO_TX_COLLISION) {
       collisions++;
-    }
-    
-    wt = RTIMER_NOW();
-    while(RTIMER_CLOCK_LT(RTIMER_NOW(), wt + INTER_PACKET_INTERVAL)) { }
-
-    if(!is_broadcast && (NETSTACK_RADIO.receiving_packet() || NETSTACK_RADIO.pending_packet())) {
-      break;
-    } else {
       PRINTF("ModifiedRDC: collisions while sending\n");
-      collisions++;
     }
   }
 
-  PRINTF("contikimac: send (strobes=%u, len=%u, %s), done\n", strobes,
+  PRINTF("ModifiedRDC: send (strobes=%u, len=%u, %s), done\n", strobes,
          packetbuf_totlen(),
          collisions ? "collision" : "no collision");
 
@@ -133,33 +122,33 @@ input_packet(void)
 #if NULLRDC_802154_AUTOACK
   if(packetbuf_datalen() == ACK_LEN) {
     /* Ignore ack packets */
-    PRINTF("nullrdc: ignored ack\n"); 
+    PRINTF("ModifiedRDC: ignored ack\n"); 
   } else
 #endif /* NULLRDC_802154_AUTOACK */
   if(NETSTACK_FRAMER.parse() < 0) {
-    PRINTF("nullrdc: failed to parse %u\n", packetbuf_datalen());
+    PRINTF("ModifiedRDC: failed to parse %u\n", packetbuf_datalen());
 #if NULLRDC_ADDRESS_FILTER
   } else if(!linkaddr_cmp(packetbuf_addr(PACKETBUF_ADDR_RECEIVER),
                                          &linkaddr_node_addr) &&
             !packetbuf_holds_broadcast()) {
-    PRINTF("nullrdc: not for us\n");
+    PRINTF("ModifiedRDC: not for us\n");
 #endif /* NULLRDC_ADDRESS_FILTER */
   } else {
     int duplicate = 0;
 
-#if NULLRDC_802154_AUTOACK || NULLRDC_802154_AUTOACK_HW
+//#if NULLRDC_802154_AUTOACK || NULLRDC_802154_AUTOACK_HW
 #if RDC_WITH_DUPLICATE_DETECTION
     /* Check for duplicate packet. */
     duplicate = mac_sequence_is_duplicate();
     if(duplicate) {
       /* Drop the packet. */
-      PRINTF("nullrdc: drop duplicate link layer packet %u\n",
+      PRINTF("ModifiedRDC: drop duplicate link layer packet %u\n",
              packetbuf_attr(PACKETBUF_ATTR_MAC_SEQNO));
     } else {
       mac_sequence_register_seqno();
     }
 #endif /* RDC_WITH_DUPLICATE_DETECTION */
-#endif /* NULLRDC_802154_AUTOACK */
+//#endif /* NULLRDC_802154_AUTOACK */
 
 #if NULLRDC_SEND_802154_ACK
     {
