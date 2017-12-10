@@ -44,7 +44,7 @@
 /* MGR extern st_lib_spirit_irqs st_lib_x_irq_status; */
 extern volatile st_lib_spirit_flag_status rx_timeout;
 /*---------------------------------------------------------------------------*/
-//#define DEBUG 0
+#define DEBUG 0
 #if DEBUG
 #include <stdio.h>
 #define PRINTF(...) printf(__VA_ARGS__)
@@ -77,9 +77,9 @@ static packetbuf_attr_t last_rssi = 0;  /* MGR */
 static packetbuf_attr_t last_lqi = 0;  /* MGR */
 static volatile uint8_t packet_is_sent = 0;
 static volatile uint8_t packet_is_received = 0;
-  
+static struct rtimer rt;
 #if DEBUG
-static rtimer_clock_t t0, t1;
+//static rtimer_clock_t t0, t1;
 #endif
 /*---------------------------------------------------------------------------*/
 /*
@@ -156,7 +156,7 @@ spirit1_strobe(uint8_t s)
 void
 spirit_set_ready_state(void)
 {
-  PRINTF("READY IN\n");
+  //PRINTF("READY IN\n");
 
   st_lib_spirit_irq_clear_status();
   IRQ_DISABLE();
@@ -180,7 +180,7 @@ spirit_set_ready_state(void)
   st_lib_spirit_irq_clear_status();
   IRQ_ENABLE();
 
-  PRINTF("READY OUT\n");
+  //PRINTF("READY OUT\n");
 }
 /*---------------------------------------------------------------------------*/
 static int
@@ -267,7 +267,6 @@ spirit_radio_init(void)
   SpiritTimerSetWakeUpTimerReloadMs(LDC_CYCLE);
   SpiritTimerSetRxTimeoutMs(RX_TIMEOUT);
   SpiritTimerLdcrAutoReload(S_ENABLE);
-//  SpiritTimerLdcrMode(S_ENABLE);
   
   /* Puts the SPIRIT1 in STANDBY mode (125us -> rx/tx) */
   spirit1_strobe(SPIRIT1_STROBE_STANDBY);
@@ -290,7 +289,7 @@ spirit_radio_init(void)
 static int
 spirit_radio_prepare(const void *payload, unsigned short payload_len)
 {
-  PRINTF("Spirit1: prep %u\n", payload_len);
+  //PRINTF("Spirit1: prep %u\n", payload_len);
   packet_is_prepared = 0;
 
   /* Checks if the payload length is supported */
@@ -318,7 +317,7 @@ spirit_radio_prepare(const void *payload, unsigned short payload_len)
   st_lib_spirit_spi_write_linear_fifo(payload_len, (uint8_t *)payload);
   IRQ_ENABLE();
 
-  PRINTF("PREPARE OUT\n");
+  //PRINTF("PREPARE OUT\n");
 
   packet_is_prepared = 1;
   return RADIO_TX_OK;
@@ -328,7 +327,7 @@ static int
 spirit_radio_transmit(unsigned short payload_len)
 {
   /* This function blocks until the packet has been transmitted */
-  PRINTF("TRANSMIT IN\n");
+  //PRINTF("TRANSMIT IN\n");
   if(!packet_is_prepared) {
     return RADIO_TX_ERR;
   }
@@ -344,12 +343,12 @@ spirit_radio_transmit(unsigned short payload_len)
   /* Puts the SPIRIT1 in TX state */
   receiving_packet = 0;
   spirit_set_ready_state();
-  t0 = RTIMER_NOW();
+//  t0 = RTIMER_NOW();
   spirit1_strobe(SPIRIT1_STROBE_TX);
 
   BUSYWAIT_UNTIL(packet_is_sent == 1, 50 * RTIMER_SECOND / 1000);
 
-  PRINTF("TRANSMIT OUT\n");
+  //PRINTF("TRANSMIT OUT\n");
   return RADIO_TX_OK;
 }
 /*---------------------------------------------------------------------------*/
@@ -627,10 +626,16 @@ PROCESS_THREAD(spirit_radio_process, ev, data)
   PROCESS_END();
 }
 /*---------------------------------------------------------------------------*/
+static void
+sync_timeout(struct rtimer *t, void *prt)
+{
+  receiving_packet = 0;
+}
+/*---------------------------------------------------------------------------*/
 void
 spirit1_interrupt_callback(void)
 {
-#define INTPRINTF(...) printf(__VA_ARGS__)/* PRINTF */
+#define INTPRINTF(...) //printf(__VA_ARGS__)/* PRINTF */
   st_lib_spirit_irqs x_irq_status;
 //  if(spirit_spi_busy() || interrupt_callback_in_progress) {
 //    process_poll(&spirit_radio_process);
@@ -643,7 +648,7 @@ spirit1_interrupt_callback(void)
 
   /* get interrupt source from radio */
   st_lib_spirit_irq_get_status(&x_irq_status);
-  st_lib_spirit_irq_clear_status();
+//  st_lib_spirit_irq_clear_status();
 
   if(x_irq_status.IRQ_RX_FIFO_ERROR) {
     INTPRINTF("RXFE\n");
@@ -664,15 +669,21 @@ spirit1_interrupt_callback(void)
   /* The IRQ_VALID_SYNC is used to notify a new packet is coming */
   if(x_irq_status.IRQ_VALID_SYNC) {
     INTPRINTF("SYNC\n");
-    SpiritTimerReloadStrobe();
+    //SpiritTimerReloadStrobe();
     receiving_packet = 1;
-  }
-
-  if(x_irq_status.IRQ_TX_DATA_SENT) {
-    t1 = RTIMER_NOW();
-    PRINTF("%lld\n", t1-t0);
-    packet_is_sent = 1;
-    process_poll(&spirit_radio_process);
+    rtimer_set(&rt, RTIMER_NOW() + 20, 1, sync_timeout, NULL);
+    /* In the case of high datarate and shor packet, the RX data ready interrupt
+       will be rised before this callback exits. In this case , to avoid
+       missing the RX data ready interrupt, we get irq status again.*/
+    BUSYWAIT_UNTIL(0, 20);
+    st_lib_spirit_irq_get_status(&x_irq_status);
+    if(x_irq_status.IRQ_RX_DATA_READY) {
+      INTPRINTF("RECEIVED\n");
+      packet_is_received = 1;
+      process_poll(&spirit_radio_process);
+      receiving_packet = 0;
+      interrupt_callback_in_progress = 0;
+    }
     return;
   }
 
@@ -692,6 +703,15 @@ spirit1_interrupt_callback(void)
       st_lib_spirit_cmd_strobe_flush_rx_fifo();
       rx_timeout = 1;
     }
+    return;
+  }
+  
+  if(x_irq_status.IRQ_TX_DATA_SENT) {
+//    t1 = RTIMER_NOW();
+//    PRINTF("%lld\n", t1-t0);
+    packet_is_sent = 1;
+    process_poll(&spirit_radio_process);
+    return;
   }
   
   if(x_irq_status.IRQ_WKUP_TOUT_LDC) {

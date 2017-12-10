@@ -147,17 +147,17 @@
 #define INFINITE_TIMEOUT            0.0
 
 /*Updated Radio paramters to increase the radio range*/
-#define CHANNEL_SPACE               20e3
-#define FREQ_DEVIATION              20e3
-#define BANDWIDTH                   100E3
-#define MODULATION_SELECT           FSK
-#define DATARATE                    38400
-#define LENGTH_WIDTH                7
-#define CRC_MODE                    PKT_CRC_MODE_8BITS
-#define EN_WHITENING                S_ENABLE
-#define SYNC_WORD                   0x1A2635A8
-/*
-"Old" parameters (may grant better throughput due to higher datarate)
+//#define CHANNEL_SPACE               20e3
+//#define FREQ_DEVIATION              20e3
+//#define BANDWIDTH                   100E3
+//#define MODULATION_SELECT           FSK
+//#define DATARATE                    38400
+//#define LENGTH_WIDTH                7
+//#define CRC_MODE                    PKT_CRC_MODE_8BITS
+//#define EN_WHITENING                S_ENABLE
+//#define SYNC_WORD                   0x1A2635A8
+
+/* "Old" parameters (may grant better throughput due to higher datarate) */
 #define CHANNEL_SPACE               100e3
 #define FREQ_DEVIATION              127e3
 #define BANDWIDTH                   540.0e3
@@ -167,10 +167,10 @@
 #define CRC_MODE                    PKT_CRC_MODE_16BITS_2
 #define EN_WHITENING                S_DISABLE
 #define SYNC_WORD                   0x88888888
-*/
 
-#define LDC_CYCLE                   68.0  /* ms */
-#define RX_TIMEOUT                  10.545  /* ms */
+
+#define LDC_CYCLE                   900  /* ms */
+#define RX_TIMEOUT                  18  /* ms */
 
 #define T_INTERVAL                  2.0 /* ms */
 
