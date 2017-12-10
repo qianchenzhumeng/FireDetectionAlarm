@@ -7,8 +7,9 @@
 #include "net/mac/mac-sequence.h"
 #include "modifiedrdc.h"
 
-#define STROBE_TIME             2228  /* 2228 / 32768 ~= 68 ms */
-#define INTER_PACKET_INTERVAL   65   /* 65 / 32768 ~= 2 ms */
+/* This value is related to the data rate of Spirit1 and the length of packet. */
+
+#define STROBE_TIME             32767  /* 32767 / 32768 ~= 1s */
 
 #define DEBUG 0
 #if DEBUG
@@ -36,8 +37,9 @@ static int
 send_one_packet(mac_callback_t sent, void *ptr)
 {
   rtimer_clock_t t0, wt;
-  int strobes, transmit_len, ret, is_broadcast;
-  uint8_t collisions;
+  int strobes, transmit_len, is_broadcast;
+  int last_sent_ok = 0, ret = MAC_TX_ERR;
+  uint8_t collisions = 0;
 
   packetbuf_set_addr(PACKETBUF_ADDR_SENDER, &linkaddr_node_addr);
 
@@ -63,11 +65,28 @@ send_one_packet(mac_callback_t sent, void *ptr)
   t0 = RTIMER_NOW();
   for(strobes = 0; RTIMER_CLOCK_LT(RTIMER_NOW(), t0 + STROBE_TIME); strobes++) {
     NETSTACK_RADIO.prepare(packetbuf_hdrptr(), transmit_len);
-    ret = NETSTACK_RADIO.transmit(transmit_len);
-    
-    if(ret == RADIO_TX_COLLISION) {
-      collisions++;
-      PRINTF("ModifiedRDC: collisions while sending\n");
+    switch(NETSTACK_RADIO.transmit(transmit_len))
+    {
+      case RADIO_TX_OK:
+        /* If there is one packet sent successfully at least,
+           this function returns MAC_TX_OK. */
+        ret = MAC_TX_OK;
+        break;
+      case RADIO_TX_COLLISION:
+        collisions++;
+        /* Only in the case that all transmitions was encountered collision,
+           this function returns MAC_TX_COLLISION. */
+        if(ret != MAC_TX_OK)
+        {
+          ret = MAC_TX_COLLISION;
+        }
+        break;
+      case RADIO_TX_ERR:
+        /* Only in the case that all transmitions was encountered error,
+           this function returns MAC_TX_ERROR. The initial value of ret is MAC_TX_ERR.*/
+        PRINTF("ModifiedRDC: errors while sending\n");
+        break;
+      default: break;
     }
   }
 
@@ -75,9 +94,14 @@ send_one_packet(mac_callback_t sent, void *ptr)
          packetbuf_totlen(),
          collisions ? "collision" : "no collision");
 
-  ret = MAC_TX_OK;
+  if(ret == MAC_TX_OK)
+  {
+    last_sent_ok = 1;
+  }
   mac_call_sent_callback(sent, ptr, ret, 1);
-  return ret;
+  //return last_sent_ok;
+  /* ignore unsuccessful transmition. */
+  return 1;
 }
 /*---------------------------------------------------------------------------*/
 static void
